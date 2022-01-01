@@ -29,6 +29,22 @@ import { writeFileSafe } from "./compiler/utils/fs";
 // as a source file when building the app.
 const reactShim = path.resolve(__dirname, "compiler/shims/react.ts");
 
+/**
+ * In case the remix project is using Yarn 3's PnP feature, we need to include
+ * the esbuild pnp plugin for the build to work. Otherwise, we just return a
+ * plugin that doesn't do anything.
+ */
+async function getYarnPnpPlugin(): Promise<esbuild.Plugin | null> {
+  try {
+    const esbuildPluginPnp = await import('@yarnpkg/esbuild-plugin-pnp');
+    if (esbuildPluginPnp) {
+      const { pnpPlugin } = esbuildPluginPnp;
+      return pnpPlugin();
+    }
+  } catch {}
+  return null;
+}
+
 interface BuildConfig {
   mode: BuildMode;
   target: BuildTarget;
@@ -341,6 +357,18 @@ async function createBrowserBuild(
       path.resolve(config.appDirectory, config.routes[id].file) + "?browser";
   }
 
+  const plugins: esbuild.Plugin[] = [
+    mdxPlugin(config),
+    browserRouteModulesPlugin(config, /\?browser$/),
+    emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
+    NodeModulesPolyfillPlugin()
+  ]
+
+  const yarnPnpPlugin = await getYarnPnpPlugin();
+  if (yarnPnpPlugin) {
+    plugins.push(yarnPnpPlugin);
+  }
+
   return esbuild.build({
     entryPoints,
     outdir: config.assetsBuildDirectory,
@@ -368,12 +396,7 @@ async function createBrowserBuild(
         config.devServerPort
       )
     },
-    plugins: [
-      mdxPlugin(config),
-      browserRouteModulesPlugin(config, /\?browser$/),
-      emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
-      NodeModulesPolyfillPlugin()
-    ]
+    plugins
   });
 }
 
@@ -408,6 +431,11 @@ async function createServerBuild(
 
   if (config.serverPlatform !== "node") {
     plugins.unshift(NodeModulesPolyfillPlugin());
+  }
+
+  const yarnPnpPlugin = await getYarnPnpPlugin();
+  if (yarnPnpPlugin) {
+    plugins.push(yarnPnpPlugin);
   }
 
   return esbuild
