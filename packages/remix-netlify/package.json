@@ -16,9 +16,12 @@
     "@remix-run/server-runtime": "1.2.2"
   },
   "peerDependencies": {
-    "@netlify/functions": "^0.10.0"
+    "@netlify/functions": "^0.10.0",
+    "react": ">=16.8",
+    "react-dom": ">=16.8"
   },
   "devDependencies": {
-    "@netlify/functions": "^0.10.0"
+    "@netlify/functions": "^0.10.0",
+    "lambda-tester": "^4.0.1"
   }
 }

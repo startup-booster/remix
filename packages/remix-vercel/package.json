@@ -16,7 +16,9 @@
     "@remix-run/server-runtime": "1.2.2"
   },
   "peerDependencies": {
-    "@vercel/node": "^1.8.3"
+    "@vercel/node": "^1.8.3",
+    "react": ">=16.8",
+    "react-dom": ">=16.8"
   },
   "devDependencies": {
     "@types/supertest": "^2.0.10",
