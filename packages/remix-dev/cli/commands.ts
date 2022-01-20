@@ -145,14 +145,20 @@ export async function watch(
 export async function dev(remixRoot: string, modeArg?: string) {
   // TODO: Warn about the need to install @remix-run/serve if it isn't there?
   let createApp: typeof createAppType;
-  let express: typeof Express;
   try {
     let serve = require("@remix-run/serve");
     createApp = serve.createApp;
-    express = require("express");
   } catch (err) {
     throw new Error(
       "Could not locate @remix-run/serve. Please verify you have it installed to use the dev command."
+    );
+  }
+  let express: typeof Express;
+  try {
+    express = require("express");
+  } catch (err) {
+    throw new Error(
+      "Could not locate express. Please verify you have it installed to use the dev command."
     );
   }
 

@@ -9,5 +9,8 @@
   "dependencies": {
     "@remix-run/serve": "*",
     "cross-env": "^7.0.3"
+  },
+  "devDependencies": {
+    "express": "^4.17.1"
   }
 }
