@@ -27,6 +27,11 @@ export type AppType = typeof appType[keyof typeof appType];
 
 export type Lang = "ts" | "js";
 
+export type PackageManager =
+  | "npm"
+  | "yarn"
+  | "yarn-pnp";
+
 export type CreateAppArgs =
   | {
       projectDir: string;
@@ -35,6 +40,7 @@ export type CreateAppArgs =
       stack?: never;
       install: boolean;
       quiet?: boolean;
+      packageManager?: PackageManager;
     }
   | {
       projectDir: string;
@@ -43,13 +49,15 @@ export type CreateAppArgs =
       stack: Stack;
       install: boolean;
       quiet?: boolean;
+      packageManager?: PackageManager;
     };
 
-async function createApp({
+export async function createApp({
   projectDir,
   lang,
   install,
   quiet,
+  packageManager = 'npm',
   ...rest
 }: CreateAppArgs) {
   let server = rest.stack ? rest.stack : rest.server;
@@ -95,6 +103,16 @@ async function createApp({
     await fse.copy(serverLangTemplate, projectDir, { overwrite: true });
   }
 
+  // copy the package manager template
+  const packageManagerLangTemplate = path.resolve(
+    __dirname,
+    "templates",
+    `${packageManager}_${lang}`
+  );
+  if (fse.existsSync(packageManagerLangTemplate)) {
+    await fse.copy(packageManagerLangTemplate, projectDir, { overwrite: true });
+  }
+
   // rename dotfiles
   let dotfiles = ["gitignore", "github", "dockerignore", "env.example"];
   await Promise.all(
@@ -114,8 +132,13 @@ async function createApp({
   appPkg.dependencies = appPkg.dependencies || {};
   appPkg.devDependencies = appPkg.devDependencies || {};
   let serverPkg = require(path.join(serverTemplate, "package.json"));
+  let packageManagerPkgPath = path.join(packageManagerLangTemplate, "package.json");
+  let packageManagerPkg = fse.existsSync(packageManagerPkgPath)
+    ? require(packageManagerPkgPath)
+    : {};
+
   ["dependencies", "devDependencies", "scripts"].forEach(key => {
-    Object.assign(appPkg[key], serverPkg[key]);
+    Object.assign(appPkg[key], serverPkg[key], packageManagerPkg[key]);
   });
 
   appPkg.main = serverPkg.main;
@@ -133,7 +156,15 @@ async function createApp({
     }
   });
 
+
   appPkg = sortPackageJSON(appPkg);
+
+  if (packageManager === "yarn-pnp") {
+    // yarn PnP does not support the remix package's magic, so we remove it from
+    // the dependencies and delete the postinstall hook
+    delete appPkg.dependencies.remix;
+    delete appPkg.scripts.postinstall;
+  }
 
   // write package.json
   await fse.writeFile(
@@ -141,8 +172,14 @@ async function createApp({
     JSON.stringify(appPkg, null, 2)
   );
 
+  // enable yarn PnP if requested
+  if (packageManager === "yarn-pnp") {
+    execSync("yarn set version berry", { stdio: "inherit", cwd: projectDir });
+  }
+
   if (install) {
-    execSync("npm install", { stdio: "inherit", cwd: projectDir });
+    const command = getInstallCommand(packageManager);
+    execSync(command, { stdio: "inherit", cwd: projectDir });
   }
 
   let serverScript = path.resolve(serverTemplate, "scripts/init.js");
@@ -174,4 +211,12 @@ async function createApp({
   }
 }
 
-export { createApp };
+export function getInstallCommand(packageManager: PackageManager): string {
+  switch (packageManager) {
+    case "npm":
+      return "npm install";
+    case "yarn":
+    case "yarn-pnp":
+      return "yarn install";
+  }
+}

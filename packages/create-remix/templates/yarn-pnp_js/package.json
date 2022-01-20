@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "@remix-run/serve": "*",
+    "@remix-run/server-runtime": "*"
+  },
+  "devDependencies": {
+    "esbuild": ">=0.10.0",
+    "@yarnpkg/esbuild-plugin-pnp": "^2.0.0"
+  }
+}

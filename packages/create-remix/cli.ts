@@ -3,9 +3,8 @@ import chalkAnimation from "chalk-animation";
 import inquirer from "inquirer";
 import meow from "meow";
 
-import type { Lang, Server, Stack } from ".";
-import { appType } from ".";
-import { createApp } from ".";
+import type { Lang, PackageManager, Server, Stack } from ".";
+import { appType, createApp, getInstallCommand } from ".";
 
 const help = `
   Usage:
@@ -69,12 +68,14 @@ async function run() {
         stack?: never;
         server: Server;
         lang: Lang;
+        packageManager: PackageManager;
         install: boolean;
       }
     | {
         appType: "stack";
         stack: Stack;
         server?: never;
+        packageManager?: never;
         install: boolean;
       }
   >([
@@ -143,9 +144,30 @@ async function run() {
       ]
     },
     {
+      name: "packageManager",
+      type: "list",
+      message: "Which package manager?",
+      when(answers) {
+        return answers.appType !== appType.stack;
+      },
+      loop: false,
+      choices: [
+        { name: "npm", value: "npm" },
+        { name: "yarn (without PnP)", value: "yarn" },
+        { name: "yarn (with PnP enabled)", value: "yarn-pnp" }
+      ]
+    },
+    {
       name: "install",
       type: "confirm",
-      message: "Do you want me to run `npm install`?",
+      message: answers => {
+        const packageManager = typeof answers.packageManager === 'string'
+          ? answers.packageManager
+          : 'npm';
+
+        const command = getInstallCommand(packageManager);
+        return `Do you want me to run \`${command}\`?`;
+      },
       default: true
     }
   ]);
@@ -155,14 +177,15 @@ async function run() {
       projectDir,
       lang: "ts",
       stack: answers.stack,
-      install: answers.install
+      install: answers.install,
     });
   } else {
     await createApp({
       projectDir,
       lang: answers.lang,
       server: answers.server,
-      install: answers.install
+      install: answers.install,
+      packageManager: answers.packageManager,
     });
   }
 }
