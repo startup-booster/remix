@@ -1,6 +1,7 @@
 import type {
   SessionStorage,
-  SessionIdStorageStrategy
+  SessionIdStorageStrategy,
+  SessionData
 } from "@remix-run/server-runtime";
 import { createSessionStorage } from "@remix-run/server-runtime";
 
@@ -23,10 +24,10 @@ interface KVSessionStorageOptions {
  * The advantage of using this instead of cookie session storage is that
  * KV Store may contain much more data than cookies.
  */
-export function createCloudflareKVSessionStorage({
+export function createCloudflareKVSessionStorage<SD = SessionData>({
   cookie,
   kv
-}: KVSessionStorageOptions): SessionStorage {
+}: KVSessionStorageOptions): SessionStorage<SD> {
   return createSessionStorage({
     cookie,
     async createData(data, expires) {

@@ -1,5 +1,9 @@
 import { createCookie, isCookie } from "../cookies";
-import type { SessionStorage, SessionIdStorageStrategy } from "../sessions";
+import type {
+  SessionStorage,
+  SessionIdStorageStrategy,
+  SessionData,
+} from "../sessions";
 import { warnOnceAboutSigningSessionCookie, createSession } from "../sessions";
 
 interface CookieSessionStorageOptions {
@@ -19,9 +23,9 @@ interface CookieSessionStorageOptions {
  * also has the limitation that serialized session data may not exceed the
  * browser's maximum cookie size. Trade-offs!
  */
-export function createCookieSessionStorage({
+export function createCookieSessionStorage<SD = SessionData>({
   cookie: cookieArg
-}: CookieSessionStorageOptions = {}): SessionStorage {
+}: CookieSessionStorageOptions = {}): SessionStorage<SD> {
   let cookie = isCookie(cookieArg)
     ? cookieArg
     : createCookie(cookieArg?.name || "__session", cookieArg);

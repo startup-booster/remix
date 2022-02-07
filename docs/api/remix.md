@@ -1839,12 +1839,17 @@ Remix comes with several pre-built session storage options for common scenarios,
 
 This is an example of a cookie session storage:
 
-```js filename=app/sessions.js
-// app/sessions.js
+```ts filename=app/sessions.ts
+// app/sessions.ts
 import { createCookieSessionStorage } from "remix";
 
+export interface SessionData {
+  userId: string;
+  error: string;
+}
+
 const { getSession, commitSession, destroySession } =
-  createCookieSessionStorage({
+  createCookieSessionStorage<SessionData>({
     // a Cookie from `createCookie` or the CookieOptions to create one
     cookie: {
       name: "__session",

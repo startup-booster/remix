@@ -30,6 +30,7 @@ export type {
   RequestHandler,
   SessionData,
   Session,
+  FlashSessionData,
   SessionStorage,
   SessionIdStorageStrategy
 } from "@remix-run/server-runtime";

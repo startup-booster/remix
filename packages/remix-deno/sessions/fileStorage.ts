@@ -1,6 +1,7 @@
 // @ts-expect-error
 import * as path from "https://deno.land/std/path/mod.ts";
 import type {
+  SessionData,
   SessionStorage,
   SessionIdStorageStrategy
 } from "@remix-run/server-runtime";
@@ -25,10 +26,10 @@ interface FileSessionStorageOptions {
  * The advantage of using this instead of cookie session storage is that
  * files may contain much more data than cookies.
  */
-export function createFileSessionStorage({
+export function createFileSessionStorage<SD = SessionData>({
   cookie,
   dir
-}: FileSessionStorageOptions): SessionStorage {
+}: FileSessionStorageOptions): SessionStorage<SD> {
   return createSessionStorage({
     cookie,
     async createData(data, expires) {

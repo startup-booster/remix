@@ -14,7 +14,7 @@ export interface SessionData {
 /**
  * Session persists data across HTTP requests.
  */
-export interface Session {
+export interface Session<SD = SessionData> {
   /**
    * A unique identifier for this session.
    *
@@ -29,37 +29,41 @@ export interface Session {
    * This is useful mostly for SessionStorage internally to access the raw
    * session data to persist.
    */
-  readonly data: SessionData;
+  readonly data: FlashSessionData<SD>;
 
   /**
    * Returns `true` if the session has a value for the given `name`, `false`
    * otherwise.
    */
-  has(name: string): boolean;
+  has(name: keyof SD & string): boolean;
 
   /**
    * Returns the value for the given `name` in this session.
    */
-  get(name: string): any;
+  get<K extends keyof SD & string>(name: K): SD[K] | undefined;
 
   /**
    * Sets a value in the session for the given `name`.
    */
-  set(name: string, value: any): void;
+  set<K extends keyof SD & string>(name: K, value: SD[K]): void;
 
   /**
    * Sets a value in the session that is only valid until the next `get()`.
    * This can be useful for temporary values, like error messages.
    */
-  flash(name: string, value: any): void;
+  flash<K extends keyof SD & string>(name: K, value: SD[K]): void;
 
   /**
    * Removes a value from the session.
    */
-  unset(name: string): void;
+  unset(name: keyof SD & string): void;
 }
 
-function flash(name: string): string {
+export type FlashSessionData<SD> = Partial<SD & {
+  [K in keyof SD as FlashKey<K & string>]: SD[K];
+}>
+export type FlashKey<Name extends string> = `__flash_${Name}__`;
+function flash<Name extends string>(name: Name): FlashKey<Name> {
   return `__flash_${name}__`;
 }
 
@@ -69,21 +73,28 @@ function flash(name: string): string {
  * Note: This function is typically not invoked directly by application code.
  * Instead, use a `SessionStorage` object's `getSession` method.
  */
-export function createSession(initialData: SessionData = {}, id = ""): Session {
-  let map = new Map<string, any>(Object.entries(initialData));
+export function createSession<SD = SessionData>(
+  initialData: SD = {} as SD,
+  id = ""
+): Session<SD> {
+  const map = new Map(
+    Object.entries(initialData)
+  ) as Map<keyof SD | FlashKey<keyof SD & string>, any>;
 
   return {
     get id() {
       return id;
     },
     get data() {
-      return Object.fromEntries(map);
+      return Object.fromEntries(map) as SD;
     },
     has(name) {
       return map.has(name) || map.has(flash(name));
     },
     get(name) {
       if (map.has(name)) return map.get(name);
+
+      if (typeof name !== 'string') return undefined;
 
       let flashName = flash(name);
       if (map.has(flashName)) {
@@ -126,7 +137,7 @@ export function isSession(object: any): object is Session {
  * A SessionStorage creates Session objects using a `Cookie` header as input.
  * Then, later it generates the `Set-Cookie` header to be used in the response.
  */
-export interface SessionStorage {
+export interface SessionStorage<SD = SessionData> {
   /**
    * Parses a Cookie header from a HTTP request and returns the associated
    * Session. If there is no session associated with the cookie, this will
@@ -135,14 +146,14 @@ export interface SessionStorage {
   getSession(
     cookieHeader?: string | null,
     options?: CookieParseOptions
-  ): Promise<Session>;
+  ): Promise<Session<SD>>;
 
   /**
    * Stores all data in the Session and returns the Set-Cookie header to be
    * used in the HTTP response.
    */
   commitSession(
-    session: Session,
+    session: Session<SD>,
     options?: CookieSerializeOptions
   ): Promise<string>;
 
@@ -151,7 +162,7 @@ export interface SessionStorage {
    * header to be used in the HTTP response.
    */
   destroySession(
-    session: Session,
+    session: Session<SD>,
     options?: CookieSerializeOptions
   ): Promise<string>;
 }
@@ -165,7 +176,7 @@ export interface SessionStorage {
  * database or on disk. A set of create, read, update, and delete operations
  * are provided for managing the session data.
  */
-export interface SessionIdStorageStrategy {
+export interface SessionIdStorageStrategy<SD = SessionData> {
   /**
    * The Cookie used to store the session id, or options used to automatically
    * create one.
@@ -175,17 +186,21 @@ export interface SessionIdStorageStrategy {
   /**
    * Creates a new record with the given data and returns the session id.
    */
-  createData: (data: SessionData, expires?: Date) => Promise<string>;
+  createData: (data: FlashSessionData<SD>, expires?: Date) => Promise<string>;
 
   /**
    * Returns data for a given session id, or `null` if there isn't any.
    */
-  readData: (id: string) => Promise<SessionData | null>;
+  readData: (id: string) => Promise<FlashSessionData<SD> | null>;
 
   /**
    * Updates data for the given session id.
    */
-  updateData: (id: string, data: SessionData, expires?: Date) => Promise<void>;
+  updateData: (
+    id: string,
+    data: FlashSessionData<SD>,
+    expires?: Date
+  ) => Promise<void>;
 
   /**
    * Deletes data for a given session id from the data store.
@@ -199,13 +214,13 @@ export interface SessionIdStorageStrategy {
  * Note: This is a low-level API that should only be used if none of the
  * existing session storage options meet your requirements.
  */
-export function createSessionStorage({
+export function createSessionStorage<SD = SessionData>({
   cookie: cookieArg,
   createData,
   readData,
   updateData,
   deleteData
-}: SessionIdStorageStrategy): SessionStorage {
+}: SessionIdStorageStrategy<SD>): SessionStorage<SD> {
   let cookie = isCookie(cookieArg)
     ? cookieArg
     : createCookie(cookieArg?.name || "__session", cookieArg);

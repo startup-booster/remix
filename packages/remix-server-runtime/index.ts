@@ -47,6 +47,7 @@ export { createRequestHandler } from "./server";
 
 export type {
   SessionData,
+  FlashSessionData,
   Session,
   SessionStorage,
   SessionIdStorageStrategy

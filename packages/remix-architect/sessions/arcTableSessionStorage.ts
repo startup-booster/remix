@@ -1,5 +1,6 @@
 import * as crypto from "crypto";
 import type {
+  SessionData,
   SessionStorage,
   SessionIdStorageStrategy
 } from "@remix-run/server-runtime";
@@ -43,10 +44,10 @@ interface ArcTableSessionStorageOptions {
  *     _idx *String
  *     _ttl TTL
  */
-export function createArcTableSessionStorage({
+export function createArcTableSessionStorage<SD = SessionData>({
   cookie,
   ...props
-}: ArcTableSessionStorageOptions): SessionStorage {
+}: ArcTableSessionStorageOptions): SessionStorage<SD> {
   async function getTable() {
     if (typeof props.table === "string") {
       const tables = await arc.tables();
@@ -73,7 +74,7 @@ export function createArcTableSessionStorage({
           continue;
         }
 
-        let params = {
+        let params: { [key: string]: any } = {
           [props.idx]: id,
           ...data
         };
@@ -98,7 +99,7 @@ export function createArcTableSessionStorage({
     },
     async updateData(id, data, expires) {
       const table = await getTable();
-      let params = {
+      let params: { [key: string]: any } = {
         [props.idx]: id,
         ...data
       };
