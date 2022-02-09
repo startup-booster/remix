@@ -21,11 +21,11 @@ interface MemorySessionStorageOptions {
  * Note: This storage does not scale beyond a single process, so it is not
  * suitable for most production scenarios.
  */
-export function createMemorySessionStorage<SD = SessionData>({
+export function createMemorySessionStorage<SD = SessionData, FD = SD>({
   cookie
-}: MemorySessionStorageOptions = {}): SessionStorage<SD> {
+}: MemorySessionStorageOptions = {}): SessionStorage<SD, FD> {
   let uniqueId = 0;
-  let map = new Map<string, { data: FlashSessionData<SD>; expires?: Date }>();
+  let map = new Map<string, { data: FlashSessionData<SD, FD>; expires?: Date }>();
 
   return createSessionStorage({
     cookie,

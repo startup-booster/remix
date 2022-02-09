@@ -14,7 +14,7 @@ export interface SessionData {
 /**
  * Session persists data across HTTP requests.
  */
-export interface Session<SD = SessionData> {
+export interface Session<SD = SessionData, FD = SD> {
   /**
    * A unique identifier for this session.
    *
@@ -29,18 +29,22 @@ export interface Session<SD = SessionData> {
    * This is useful mostly for SessionStorage internally to access the raw
    * session data to persist.
    */
-  readonly data: FlashSessionData<SD>;
+  readonly data: FlashSessionData<SD, FD>;
 
   /**
    * Returns `true` if the session has a value for the given `name`, `false`
    * otherwise.
    */
-  has(name: keyof SD & string): boolean;
+  has(name: (keyof SD | keyof FD) & string): boolean;
 
   /**
    * Returns the value for the given `name` in this session.
    */
-  get<K extends keyof SD & string>(name: K): SD[K] | undefined;
+  get<K extends (keyof SD | keyof FD) & string>(name: K): (
+    | (K extends keyof SD ? SD[K] : undefined)
+    | (K extends keyof FD ? FD[K] : undefined)
+    | undefined
+  );
 
   /**
    * Sets a value in the session for the given `name`.
@@ -51,7 +55,7 @@ export interface Session<SD = SessionData> {
    * Sets a value in the session that is only valid until the next `get()`.
    * This can be useful for temporary values, like error messages.
    */
-  flash<K extends keyof SD & string>(name: K, value: SD[K]): void;
+  flash<K extends keyof FD & string>(name: K, value: FD[K]): void;
 
   /**
    * Removes a value from the session.
@@ -59,8 +63,8 @@ export interface Session<SD = SessionData> {
   unset(name: keyof SD & string): void;
 }
 
-export type FlashSessionData<SD> = Partial<SD & {
-  [K in keyof SD as FlashKey<K & string>]: SD[K];
+export type FlashSessionData<SD, FD> = Partial<SD & {
+  [K in keyof FD as FlashKey<K & string>]: FD[K];
 }>
 export type FlashKey<Name extends string> = `__flash_${Name}__`;
 function flash<Name extends string>(name: Name): FlashKey<Name> {
@@ -73,13 +77,13 @@ function flash<Name extends string>(name: Name): FlashKey<Name> {
  * Note: This function is typically not invoked directly by application code.
  * Instead, use a `SessionStorage` object's `getSession` method.
  */
-export function createSession<SD = SessionData>(
+export function createSession<SD = SessionData, FD = SD>(
   initialData: SD = {} as SD,
   id = ""
-): Session<SD> {
+): Session<SD, FD> {
   const map = new Map(
     Object.entries(initialData)
-  ) as Map<keyof SD | FlashKey<keyof SD & string>, any>;
+  ) as Map<keyof SD | FlashKey<keyof FD & string>, any>;
 
   return {
     get id() {
@@ -89,14 +93,15 @@ export function createSession<SD = SessionData>(
       return Object.fromEntries(map) as SD;
     },
     has(name) {
-      return map.has(name) || map.has(flash(name));
+      return map.has(name as keyof SD) ||
+        map.has(flash(name as keyof FD & string));
     },
     get(name) {
-      if (map.has(name)) return map.get(name);
+      if (map.has(name as keyof SD)) return map.get(name as keyof SD);
 
       if (typeof name !== 'string') return undefined;
 
-      let flashName = flash(name);
+      let flashName = flash(name as keyof FD & string);
       if (map.has(flashName)) {
         let value = map.get(flashName);
         map.delete(flashName);
@@ -137,7 +142,7 @@ export function isSession(object: any): object is Session {
  * A SessionStorage creates Session objects using a `Cookie` header as input.
  * Then, later it generates the `Set-Cookie` header to be used in the response.
  */
-export interface SessionStorage<SD = SessionData> {
+export interface SessionStorage<SD = SessionData, FD = SD> {
   /**
    * Parses a Cookie header from a HTTP request and returns the associated
    * Session. If there is no session associated with the cookie, this will
@@ -146,14 +151,14 @@ export interface SessionStorage<SD = SessionData> {
   getSession(
     cookieHeader?: string | null,
     options?: CookieParseOptions
-  ): Promise<Session<SD>>;
+  ): Promise<Session<SD, FD>>;
 
   /**
    * Stores all data in the Session and returns the Set-Cookie header to be
    * used in the HTTP response.
    */
   commitSession(
-    session: Session<SD>,
+    session: Session<SD, FD>,
     options?: CookieSerializeOptions
   ): Promise<string>;
 
@@ -162,7 +167,7 @@ export interface SessionStorage<SD = SessionData> {
    * header to be used in the HTTP response.
    */
   destroySession(
-    session: Session<SD>,
+    session: Session<SD, FD>,
     options?: CookieSerializeOptions
   ): Promise<string>;
 }
@@ -176,7 +181,7 @@ export interface SessionStorage<SD = SessionData> {
  * database or on disk. A set of create, read, update, and delete operations
  * are provided for managing the session data.
  */
-export interface SessionIdStorageStrategy<SD = SessionData> {
+export interface SessionIdStorageStrategy<SD = SessionData, FD = SD> {
   /**
    * The Cookie used to store the session id, or options used to automatically
    * create one.
@@ -186,19 +191,19 @@ export interface SessionIdStorageStrategy<SD = SessionData> {
   /**
    * Creates a new record with the given data and returns the session id.
    */
-  createData: (data: FlashSessionData<SD>, expires?: Date) => Promise<string>;
+  createData: (data: FlashSessionData<SD, FD>, expires?: Date) => Promise<string>;
 
   /**
    * Returns data for a given session id, or `null` if there isn't any.
    */
-  readData: (id: string) => Promise<FlashSessionData<SD> | null>;
+  readData: (id: string) => Promise<FlashSessionData<SD, FD> | null>;
 
   /**
    * Updates data for the given session id.
    */
   updateData: (
     id: string,
-    data: FlashSessionData<SD>,
+    data: FlashSessionData<SD, FD>,
     expires?: Date
   ) => Promise<void>;
 
@@ -214,13 +219,13 @@ export interface SessionIdStorageStrategy<SD = SessionData> {
  * Note: This is a low-level API that should only be used if none of the
  * existing session storage options meet your requirements.
  */
-export function createSessionStorage<SD = SessionData>({
+export function createSessionStorage<SD = SessionData, FD = SD>({
   cookie: cookieArg,
   createData,
   readData,
   updateData,
   deleteData
-}: SessionIdStorageStrategy<SD>): SessionStorage<SD> {
+}: SessionIdStorageStrategy<SD, FD>): SessionStorage<SD, FD> {
   let cookie = isCookie(cookieArg)
     ? cookieArg
     : createCookie(cookieArg?.name || "__session", cookieArg);

@@ -23,9 +23,9 @@ interface CookieSessionStorageOptions {
  * also has the limitation that serialized session data may not exceed the
  * browser's maximum cookie size. Trade-offs!
  */
-export function createCookieSessionStorage<SD = SessionData>({
+export function createCookieSessionStorage<SD = SessionData, FD = SD>({
   cookie: cookieArg
-}: CookieSessionStorageOptions = {}): SessionStorage<SD> {
+}: CookieSessionStorageOptions = {}): SessionStorage<SD, FD> {
   let cookie = isCookie(cookieArg)
     ? cookieArg
     : createCookie(cookieArg?.name || "__session", cookieArg);

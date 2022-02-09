@@ -44,10 +44,10 @@ interface ArcTableSessionStorageOptions {
  *     _idx *String
  *     _ttl TTL
  */
-export function createArcTableSessionStorage<SD = SessionData>({
+export function createArcTableSessionStorage<SD = SessionData, FD = SD>({
   cookie,
   ...props
-}: ArcTableSessionStorageOptions): SessionStorage<SD> {
+}: ArcTableSessionStorageOptions): SessionStorage<SD, FD> {
   async function getTable() {
     if (typeof props.table === "string") {
       const tables = await arc.tables();

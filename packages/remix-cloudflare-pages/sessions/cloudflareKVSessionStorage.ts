@@ -24,10 +24,10 @@ interface KVSessionStorageOptions {
  * The advantage of using this instead of cookie session storage is that
  * KV Store may contain much more data than cookies.
  */
-export function createCloudflareKVSessionStorage<SD = SessionData>({
+export function createCloudflareKVSessionStorage<SD = SessionData, FD = SD>({
   cookie,
   kv
-}: KVSessionStorageOptions): SessionStorage<SD> {
+}: KVSessionStorageOptions): SessionStorage<SD, FD> {
   return createSessionStorage({
     cookie,
     async createData(data, expires) {

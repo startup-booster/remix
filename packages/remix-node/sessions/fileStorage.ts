@@ -27,10 +27,10 @@ interface FileSessionStorageOptions {
  * The advantage of using this instead of cookie session storage is that
  * files may contain much more data than cookies.
  */
-export function createFileSessionStorage<SD = SessionData>({
+export function createFileSessionStorage<SD = SessionData, FD = SD>({
   cookie,
   dir
-}: FileSessionStorageOptions): SessionStorage<SD> {
+}: FileSessionStorageOptions): SessionStorage<SD, FD> {
   return createSessionStorage({
     cookie,
     async createData(data, expires) {
