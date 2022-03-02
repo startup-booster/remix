@@ -51,8 +51,14 @@
     "react-dom": ">=16.8"
   },
   "peerDependenciesMeta": {
-    "@remix-run/serve": { "optional": true },
-    "@yarnpkg/esbuild-plugin-pnp": { "optional": true },
-    "express": { "optional": true }
+    "@remix-run/serve": {
+      "optional": true
+    },
+    "@yarnpkg/esbuild-plugin-pnp": {
+      "optional": true
+    },
+    "express": {
+      "optional": true
+    }
   }
 }

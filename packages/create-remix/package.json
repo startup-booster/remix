@@ -12,9 +12,7 @@
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
   },
-  "bin": {
-    "create-remix": "cli.js"
-  },
+  "bin": "cli.js",
   "dependencies": {
     "@iarna/toml": "^2.2.5",
     "chalk-animation": "^1.6.0",
